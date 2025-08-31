@@ -9,5 +9,40 @@ resources:
       project: SimpleAndAccurate # Required only if the source pipeline is in another project
       trigger: true # Run app-ci pipeline when any run of security-lib-ci completes
 
-steps:
-  - bash: echo "app-ci runs after security-lib-ci completes"
+stages:
+  - stage: Development
+    displayName: "Development Environment"
+    jobs:
+      - job: DevJob
+        displayName: "Development Job"
+        pool:
+          vmImage: "ubuntu-latest"
+        steps:
+          - bash: echo "Running in Development environment"
+            displayName: "Print Development Environment"
+
+  - stage: Test
+    displayName: "Test Environment"
+    dependsOn: Development
+    condition: succeeded()
+    jobs:
+      - job: TestJob
+        displayName: "Test Job"
+        pool:
+          vmImage: "ubuntu-latest"
+        steps:
+          - bash: echo "Running in Test environment"
+            displayName: "Print Test Environment"
+
+  - stage: Production
+    displayName: "Production Environment"
+    dependsOn: Test
+    condition: succeeded()
+    jobs:
+      - job: ProdJob
+        displayName: "Production Job"
+        pool:
+          vmImage: "ubuntu-latest"
+        steps:
+          - bash: echo "Running in Production environment"
+            displayName: "Print Production Environment"
