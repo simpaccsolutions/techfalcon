@@ -40,8 +40,45 @@ stages:
               echo "resources.pipeline.greenfalcon.sourceBranch: $(resources.pipeline.greenfalcon.sourceBranch)"
               echo "resources.pipeline.bluefalcon.runID: $(resources.pipeline.bluefalcon.runID)"
               echo "resources.pipeline.greenfalcon.runID: $(resources.pipeline.greenfalcon.runID)"
+
+              # Determine which stage should run based on branch patterns
+              BLUE_BRANCH="$(resources.pipeline.bluefalcon.sourceBranch)"
+              GREEN_BRANCH="$(resources.pipeline.greenfalcon.sourceBranch)"
+
+              echo "BLUE_BRANCH: $BLUE_BRANCH"
+              echo "GREEN_BRANCH: $GREEN_BRANCH"
+
+              # Check for test or prod branches
+              if [[ "$BLUE_BRANCH" == refs/heads/test/* ]] || [[ "$BLUE_BRANCH" == refs/heads/prod/* ]] || [[ "$GREEN_BRANCH" == refs/heads/test/* ]] || [[ "$GREEN_BRANCH" == refs/heads/prod/* ]]; then
+                echo "##vso[task.setvariable variable=shouldRunTest;isOutput=true]true"
+                echo "Should run TEST stage"
+              else
+                echo "##vso[task.setvariable variable=shouldRunTest;isOutput=true]false"
+                echo "Should NOT run TEST stage"
+              fi
+
+              # Check for prod branches only
+              if [[ "$BLUE_BRANCH" == refs/heads/prod/* ]] || [[ "$GREEN_BRANCH" == refs/heads/prod/* ]]; then
+                echo "##vso[task.setvariable variable=shouldRunProd;isOutput=true]true"
+                echo "Should run PROD stage"
+              else
+                echo "##vso[task.setvariable variable=shouldRunProd;isOutput=true]false"
+                echo "Should NOT run PROD stage"
+              fi
+
+              # Check for dev/main branches (and not test/prod)
+              if ([[ "$BLUE_BRANCH" == "refs/heads/main" ]] || [[ "$BLUE_BRANCH" == refs/heads/dev/* ]] || [[ "$GREEN_BRANCH" == "refs/heads/main" ]] || [[ "$GREEN_BRANCH" == refs/heads/dev/* ]]) && \
+                 ! ([[ "$BLUE_BRANCH" == refs/heads/test/* ]] || [[ "$BLUE_BRANCH" == refs/heads/prod/* ]] || [[ "$GREEN_BRANCH" == refs/heads/test/* ]] || [[ "$GREEN_BRANCH" == refs/heads/prod/* ]]); then
+                echo "##vso[task.setvariable variable=shouldRunDev;isOutput=true]true"
+                echo "Should run DEV stage"
+              else
+                echo "##vso[task.setvariable variable=shouldRunDev;isOutput=true]false"
+                echo "Should NOT run DEV stage"
+              fi
+
               echo "========================="
             displayName: "Print Debug Information"
+            name: debugOutput
 
   - stage: Development
     displayName: "Development Environment"
@@ -49,22 +86,7 @@ stages:
     condition: |
       and(
         succeeded(),
-        or(
-          or(
-            eq(variables['blueFalconBranch'], 'refs/heads/main'),
-            startsWith(variables['blueFalconBranch'], 'refs/heads/dev/')
-          ),
-          or(
-            eq(variables['greenFalconBranch'], 'refs/heads/main'),
-            startsWith(variables['greenFalconBranch'], 'refs/heads/dev/')
-          )
-        ),
-        not(or(
-          startsWith(variables['blueFalconBranch'], 'refs/heads/test/'),
-          startsWith(variables['blueFalconBranch'], 'refs/heads/prod/'),
-          startsWith(variables['greenFalconBranch'], 'refs/heads/test/'),
-          startsWith(variables['greenFalconBranch'], 'refs/heads/prod/')
-        ))
+        eq(dependencies.Debug.outputs['debugOutput.shouldRunDev'], 'true')
       )
     jobs:
       - job: DevJob
@@ -84,12 +106,7 @@ stages:
     condition: |
       and(
         succeeded(),
-        or(
-          startsWith(variables['blueFalconBranch'], 'refs/heads/test/'),
-          startsWith(variables['blueFalconBranch'], 'refs/heads/prod/'),
-          startsWith(variables['greenFalconBranch'], 'refs/heads/test/'),
-          startsWith(variables['greenFalconBranch'], 'refs/heads/prod/')
-        )
+        eq(dependencies.Debug.outputs['debugOutput.shouldRunTest'], 'true')
       )
     jobs:
       - job: TestJob
@@ -109,10 +126,7 @@ stages:
     condition: |
       and(
         succeeded('Test'),
-        or(
-          startsWith(variables['blueFalconBranch'], 'refs/heads/prod/'),
-          startsWith(variables['greenFalconBranch'], 'refs/heads/prod/')
-        )
+        eq(dependencies.Debug.outputs['debugOutput.shouldRunProd'], 'true')
       )
     jobs:
       - job: ProdJob
