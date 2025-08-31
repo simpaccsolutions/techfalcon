@@ -48,8 +48,8 @@ stages:
               echo "BLUE_BRANCH: $BLUE_BRANCH"
               echo "GREEN_BRANCH: $GREEN_BRANCH"
 
-              # Check for test or prod branches
-              if [[ "$BLUE_BRANCH" == refs/heads/test/* ]] || [[ "$BLUE_BRANCH" == refs/heads/prod/* ]] || [[ "$GREEN_BRANCH" == refs/heads/test/* ]] || [[ "$GREEN_BRANCH" == refs/heads/prod/* ]]; then
+              # Check for test branches only
+              if [[ "$BLUE_BRANCH" == refs/heads/test/* ]] || [[ "$GREEN_BRANCH" == refs/heads/test/* ]]; then
                 echo "##vso[task.setvariable variable=shouldRunTest;isOutput=true]true"
                 echo "Should run TEST stage"
                 echo "Setting shouldRunTest to: true"
@@ -59,8 +59,8 @@ stages:
                 echo "Setting shouldRunTest to: false"
               fi
 
-              # Check for prod branches only
-              if [[ "$BLUE_BRANCH" == refs/heads/prod/* ]] || [[ "$GREEN_BRANCH" == refs/heads/prod/* ]]; then
+              # Check for release branches only
+              if [[ "$BLUE_BRANCH" == refs/heads/release/* ]] || [[ "$GREEN_BRANCH" == refs/heads/release/* ]]; then
                 echo "##vso[task.setvariable variable=shouldRunProd;isOutput=true]true"
                 echo "Should run PROD stage"
               else
@@ -68,9 +68,8 @@ stages:
                 echo "Should NOT run PROD stage"
               fi
 
-              # Check for dev/main branches (and not test/prod)
-              if ([[ "$BLUE_BRANCH" == "refs/heads/main" ]] || [[ "$BLUE_BRANCH" == refs/heads/dev/* ]] || [[ "$GREEN_BRANCH" == "refs/heads/main" ]] || [[ "$GREEN_BRANCH" == refs/heads/dev/* ]]) && \
-                 ! ([[ "$BLUE_BRANCH" == refs/heads/test/* ]] || [[ "$BLUE_BRANCH" == refs/heads/prod/* ]] || [[ "$GREEN_BRANCH" == refs/heads/test/* ]] || [[ "$GREEN_BRANCH" == refs/heads/prod/* ]]); then
+              # Check for dev/main branches only
+              if [[ "$BLUE_BRANCH" == "refs/heads/main" ]] || [[ "$BLUE_BRANCH" == refs/heads/dev/* ]] || [[ "$GREEN_BRANCH" == "refs/heads/main" ]] || [[ "$GREEN_BRANCH" == refs/heads/dev/* ]]; then
                 echo "##vso[task.setvariable variable=shouldRunDev;isOutput=true]true"
                 echo "Should run DEV stage"
               else
@@ -111,7 +110,11 @@ stages:
   - stage: Test
     displayName: "Test Environment"
     dependsOn: Debug
-    condition: succeeded()
+    condition: |
+      and(
+        succeeded(),
+        eq(stageDependencies.Debug.DebugJob.outputs['debugOutput.shouldRunTest'], 'true')
+      )
     jobs:
       - job: TestJob
         displayName: "Test Job"
@@ -126,12 +129,10 @@ stages:
 
   - stage: Production
     displayName: "Production Environment"
-    dependsOn:
-      - Debug
-      - Test
+    dependsOn: Debug
     condition: |
       and(
-        in(dependencies.Test.result, 'Succeeded', 'Skipped'),
+        succeeded(),
         eq(stageDependencies.Debug.DebugJob.outputs['debugOutput.shouldRunProd'], 'true')
       )
     jobs:
