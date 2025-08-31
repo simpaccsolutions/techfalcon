@@ -30,8 +30,8 @@ stages:
               echo "triggerBranch: $(triggerBranch)"
               echo "triggerPipeline: $(triggerPipeline)"
               echo "Build.Reason: $(Build.Reason)"
-              echo "resources.pipeline.bluefalcon.sourceBranch: ${{ resources.pipeline.bluefalcon.sourceBranch }}"
-              echo "resources.pipeline.greenfalcon.sourceBranch: ${{ resources.pipeline.greenfalcon.sourceBranch }}"
+              echo "resources.pipeline.bluefalcon.sourceBranch: $(resources.pipeline.bluefalcon.sourceBranch)"
+              echo "resources.pipeline.greenfalcon.sourceBranch: $(resources.pipeline.greenfalcon.sourceBranch)"
               echo "========================="
             displayName: "Print Debug Information"
 
