@@ -51,10 +51,12 @@ stages:
               # Check for test branches only
               if [[ "$BLUE_BRANCH" == refs/heads/test/* ]] || [[ "$GREEN_BRANCH" == refs/heads/test/* ]]; then
                 echo "##vso[task.setvariable variable=shouldRunTest;isOutput=true]true"
+                echo "##vso[task.setvariable variable=shouldRunTest]true"
                 echo "Should run TEST stage"
                 echo "Setting shouldRunTest to: true"
               else
                 echo "##vso[task.setvariable variable=shouldRunTest;isOutput=true]false"
+                echo "##vso[task.setvariable variable=shouldRunTest]false"
                 echo "Should NOT run TEST stage"
                 echo "Setting shouldRunTest to: false"
               fi
@@ -62,18 +64,22 @@ stages:
               # Check for release branches only
               if [[ "$BLUE_BRANCH" == refs/heads/release/* ]] || [[ "$GREEN_BRANCH" == refs/heads/release/* ]]; then
                 echo "##vso[task.setvariable variable=shouldRunProd;isOutput=true]true"
+                echo "##vso[task.setvariable variable=shouldRunProd]true"
                 echo "Should run PROD stage"
               else
                 echo "##vso[task.setvariable variable=shouldRunProd;isOutput=true]false"
+                echo "##vso[task.setvariable variable=shouldRunProd]false"
                 echo "Should NOT run PROD stage"
               fi
 
               # Check for dev/main branches only
               if [[ "$BLUE_BRANCH" == "refs/heads/main" ]] || [[ "$BLUE_BRANCH" == refs/heads/dev/* ]] || [[ "$GREEN_BRANCH" == "refs/heads/main" ]] || [[ "$GREEN_BRANCH" == refs/heads/dev/* ]]; then
                 echo "##vso[task.setvariable variable=shouldRunDev;isOutput=true]true"
+                echo "##vso[task.setvariable variable=shouldRunDev]true"
                 echo "Should run DEV stage"
               else
                 echo "##vso[task.setvariable variable=shouldRunDev;isOutput=true]false"
+                echo "##vso[task.setvariable variable=shouldRunDev]false"
                 echo "Should NOT run DEV stage"
               fi
 
@@ -93,7 +99,10 @@ stages:
     condition: |
       and(
         succeeded(),
-        eq(stageDependencies.Debug.DebugJob.outputs['debugOutput.shouldRunDev'], 'true')
+        or(
+          eq(stageDependencies.Debug.DebugJob.outputs['debugOutput.shouldRunDev'], 'true'),
+          eq(variables['shouldRunDev'], 'true')
+        )
       )
     jobs:
       - job: DevJob
@@ -113,7 +122,10 @@ stages:
     condition: |
       and(
         succeeded(),
-        eq(stageDependencies.Debug.DebugJob.outputs['debugOutput.shouldRunTest'], 'true')
+        or(
+          eq(stageDependencies.Debug.DebugJob.outputs['debugOutput.shouldRunTest'], 'true'),
+          eq(variables['shouldRunTest'], 'true')
+        )
       )
     jobs:
       - job: TestJob
@@ -133,7 +145,10 @@ stages:
     condition: |
       and(
         succeeded(),
-        eq(stageDependencies.Debug.DebugJob.outputs['debugOutput.shouldRunProd'], 'true')
+        or(
+          eq(stageDependencies.Debug.DebugJob.outputs['debugOutput.shouldRunProd'], 'true'),
+          eq(variables['shouldRunProd'], 'true')
+        )
       )
     jobs:
       - job: ProdJob
