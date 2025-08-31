@@ -16,17 +16,35 @@ variables:
     value: $[coalesce(resources.pipeline.bluefalcon.pipelineName, resources.pipeline.greenfalcon.pipelineName, 'direct')]
 
 stages:
+  - stage: Debug
+    displayName: "Debug Information"
+    jobs:
+      - job: DebugJob
+        displayName: "Debug Job"
+        pool:
+          vmImage: "ubuntu-latest"
+        steps:
+          - bash: |
+              echo "=== DEBUG INFORMATION ==="
+              echo "Build.SourceBranch: $(Build.SourceBranch)"
+              echo "triggerBranch: $(triggerBranch)"
+              echo "triggerPipeline: $(triggerPipeline)"
+              echo "Build.Reason: $(Build.Reason)"
+              echo "resources.pipeline.bluefalcon.sourceBranch: ${{ resources.pipeline.bluefalcon.sourceBranch }}"
+              echo "resources.pipeline.greenfalcon.sourceBranch: ${{ resources.pipeline.greenfalcon.sourceBranch }}"
+              echo "========================="
+            displayName: "Print Debug Information"
+
   - stage: Development
     displayName: "Development Environment"
+    dependsOn: Debug
     condition: |
       and(
-        ne(variables['Build.Reason'], 'PullRequest'),
+        succeeded(),
         or(
           eq(variables['triggerBranch'], 'refs/heads/main'),
           startsWith(variables['triggerBranch'], 'refs/heads/dev/')
-        ),
-        not(startsWith(variables['triggerBranch'], 'refs/heads/test/')),
-        not(startsWith(variables['triggerBranch'], 'refs/heads/prod/'))
+        )
       )
     jobs:
       - job: DevJob
@@ -42,9 +60,10 @@ stages:
 
   - stage: Test
     displayName: "Test Environment"
+    dependsOn: Debug
     condition: |
       and(
-        ne(variables['Build.Reason'], 'PullRequest'),
+        succeeded(),
         or(
           startsWith(variables['triggerBranch'], 'refs/heads/test/'),
           startsWith(variables['triggerBranch'], 'refs/heads/prod/')
