@@ -86,7 +86,7 @@ stages:
     condition: |
       and(
         succeeded(),
-        eq(dependencies.Debug.outputs['debugOutput.shouldRunDev'], 'true')
+        eq(stageDependencies.Debug.DebugJob.outputs['debugOutput.shouldRunDev'], 'true')
       )
     jobs:
       - job: DevJob
@@ -106,7 +106,7 @@ stages:
     condition: |
       and(
         succeeded(),
-        eq(dependencies.Debug.outputs['debugOutput.shouldRunTest'], 'true')
+        eq(stageDependencies.Debug.DebugJob.outputs['debugOutput.shouldRunTest'], 'true')
       )
     jobs:
       - job: TestJob
@@ -126,7 +126,7 @@ stages:
     condition: |
       and(
         succeeded('Test'),
-        eq(dependencies.Debug.outputs['debugOutput.shouldRunProd'], 'true')
+        eq(stageDependencies.Debug.DebugJob.outputs['debugOutput.shouldRunProd'], 'true')
       )
     jobs:
       - job: ProdJob
