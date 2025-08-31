@@ -18,6 +18,10 @@ variables:
     value: $[ne(resources.pipeline.bluefalcon.runID, '')]
   - name: greenFalconTriggered
     value: $[ne(resources.pipeline.greenfalcon.runID, '')]
+  - name: blueFalconBranch
+    value: $[resources.pipeline.bluefalcon.sourceBranch]
+  - name: greenFalconBranch
+    value: $[resources.pipeline.greenfalcon.sourceBranch]
 
 stages:
   - stage: Debug
@@ -36,6 +40,8 @@ stages:
               echo "Build.Reason: $(Build.Reason)"
               echo "blueFalconTriggered: $(blueFalconTriggered)"
               echo "greenFalconTriggered: $(greenFalconTriggered)"
+              echo "blueFalconBranch: $(blueFalconBranch)"
+              echo "greenFalconBranch: $(greenFalconBranch)"
               echo "resources.pipeline.bluefalcon.sourceBranch: $(resources.pipeline.bluefalcon.sourceBranch)"
               echo "resources.pipeline.greenfalcon.sourceBranch: $(resources.pipeline.greenfalcon.sourceBranch)"
               echo "resources.pipeline.bluefalcon.runID: $(resources.pipeline.bluefalcon.runID)"
@@ -53,15 +59,15 @@ stages:
           and(
             eq(variables['blueFalconTriggered'], 'True'),
             or(
-              eq(resources.pipeline.bluefalcon.sourceBranch, 'refs/heads/main'),
-              startsWith(resources.pipeline.bluefalcon.sourceBranch, 'refs/heads/dev/')
+              eq(variables['blueFalconBranch'], 'refs/heads/main'),
+              startsWith(variables['blueFalconBranch'], 'refs/heads/dev/')
             )
           ),
           and(
             eq(variables['greenFalconTriggered'], 'True'),
             or(
-              eq(resources.pipeline.greenfalcon.sourceBranch, 'refs/heads/main'),
-              startsWith(resources.pipeline.greenfalcon.sourceBranch, 'refs/heads/dev/')
+              eq(variables['greenFalconBranch'], 'refs/heads/main'),
+              startsWith(variables['greenFalconBranch'], 'refs/heads/dev/')
             )
           )
         )
@@ -88,15 +94,15 @@ stages:
           and(
             eq(variables['blueFalconTriggered'], 'True'),
             or(
-              startsWith(resources.pipeline.bluefalcon.sourceBranch, 'refs/heads/test/'),
-              startsWith(resources.pipeline.bluefalcon.sourceBranch, 'refs/heads/prod/')
+              startsWith(variables['blueFalconBranch'], 'refs/heads/test/'),
+              startsWith(variables['blueFalconBranch'], 'refs/heads/prod/')
             )
           ),
           and(
             eq(variables['greenFalconTriggered'], 'True'),
             or(
-              startsWith(resources.pipeline.greenfalcon.sourceBranch, 'refs/heads/test/'),
-              startsWith(resources.pipeline.greenfalcon.sourceBranch, 'refs/heads/prod/')
+              startsWith(variables['greenFalconBranch'], 'refs/heads/test/'),
+              startsWith(variables['greenFalconBranch'], 'refs/heads/prod/')
             )
           )
         )
@@ -122,11 +128,11 @@ stages:
         or(
           and(
             eq(variables['blueFalconTriggered'], 'True'),
-            startsWith(resources.pipeline.bluefalcon.sourceBranch, 'refs/heads/prod/')
+            startsWith(variables['blueFalconBranch'], 'refs/heads/prod/')
           ),
           and(
             eq(variables['greenFalconTriggered'], 'True'),
-            startsWith(resources.pipeline.greenfalcon.sourceBranch, 'refs/heads/prod/')
+            startsWith(variables['greenFalconBranch'], 'refs/heads/prod/')
           )
         )
       )
