@@ -19,9 +19,14 @@ stages:
   - stage: Development
     displayName: "Development Environment"
     condition: |
-      or(
-        eq(variables['triggerBranch'], 'refs/heads/main'),
-        startsWith(variables['triggerBranch'], 'refs/heads/dev/')
+      and(
+        ne(variables['Build.Reason'], 'PullRequest'),
+        or(
+          eq(variables['triggerBranch'], 'refs/heads/main'),
+          startsWith(variables['triggerBranch'], 'refs/heads/dev/')
+        ),
+        not(startsWith(variables['triggerBranch'], 'refs/heads/test/')),
+        not(startsWith(variables['triggerBranch'], 'refs/heads/prod/'))
       )
     jobs:
       - job: DevJob
@@ -37,11 +42,13 @@ stages:
 
   - stage: Test
     displayName: "Test Environment"
-    dependsOn: []
     condition: |
-      or(
-        startsWith(variables['triggerBranch'], 'refs/heads/test/'),
-        startsWith(variables['triggerBranch'], 'refs/heads/prod/')
+      and(
+        ne(variables['Build.Reason'], 'PullRequest'),
+        or(
+          startsWith(variables['triggerBranch'], 'refs/heads/test/'),
+          startsWith(variables['triggerBranch'], 'refs/heads/prod/')
+        )
       )
     jobs:
       - job: TestJob
@@ -60,7 +67,8 @@ stages:
     dependsOn: Test
     condition: |
       and(
-        succeeded(),
+        ne(variables['Build.Reason'], 'PullRequest'),
+        succeeded('Test'),
         startsWith(variables['triggerBranch'], 'refs/heads/prod/')
       )
     jobs:
