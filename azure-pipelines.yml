@@ -1,0 +1,13 @@
+resources:
+  pipelines:
+    - pipeline: bluefalcon # Name of the pipeline resource.
+      source: simpaccsolutions.bluefalcon # The name of the pipeline referenced by this pipeline resource.
+      project: SimpleAndAccurate # Required only if the source pipeline is in another project
+      trigger: true # Run app-ci pipeline when any run of security-lib-ci completes
+    - pipeline: greenfalcon # Name of the pipeline resource.
+      source: simpaccsolutions.greenfalcon # The name of the pipeline referenced by this pipeline resource.
+      project: SimpleAndAccurate # Required only if the source pipeline is in another project
+      trigger: true # Run app-ci pipeline when any run of security-lib-ci completes
+
+steps:
+  - bash: echo "app-ci runs after security-lib-ci completes"
