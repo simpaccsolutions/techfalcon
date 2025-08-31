@@ -9,40 +9,68 @@ resources:
       project: SimpleAndAccurate # Required only if the source pipeline is in another project
       trigger: true # Run app-ci pipeline when any run of security-lib-ci completes
 
+variables:
+  - name: triggerBranch
+    value: $[coalesce(resources.pipeline.bluefalcon.sourceBranch, resources.pipeline.greenfalcon.sourceBranch, variables['Build.SourceBranch'])]
+  - name: triggerPipeline
+    value: $[coalesce(resources.pipeline.bluefalcon.pipelineName, resources.pipeline.greenfalcon.pipelineName, 'direct')]
+
 stages:
   - stage: Development
     displayName: "Development Environment"
+    condition: |
+      or(
+        eq(variables['triggerBranch'], 'refs/heads/main'),
+        startsWith(variables['triggerBranch'], 'refs/heads/dev/')
+      )
     jobs:
       - job: DevJob
         displayName: "Development Job"
         pool:
           vmImage: "ubuntu-latest"
         steps:
-          - bash: echo "Running in Development environment"
+          - bash: |
+              echo "Running in Development environment"
+              echo "Triggered by pipeline: $(triggerPipeline)"
+              echo "Triggered by branch: $(triggerBranch)"
             displayName: "Print Development Environment"
 
   - stage: Test
     displayName: "Test Environment"
-    dependsOn: Development
-    condition: succeeded()
+    dependsOn: []
+    condition: |
+      or(
+        startsWith(variables['triggerBranch'], 'refs/heads/test/'),
+        startsWith(variables['triggerBranch'], 'refs/heads/prod/')
+      )
     jobs:
       - job: TestJob
         displayName: "Test Job"
         pool:
           vmImage: "ubuntu-latest"
         steps:
-          - bash: echo "Running in Test environment"
+          - bash: |
+              echo "Running in Test environment"
+              echo "Triggered by pipeline: $(triggerPipeline)"
+              echo "Triggered by branch: $(triggerBranch)"
             displayName: "Print Test Environment"
 
   - stage: Production
     displayName: "Production Environment"
     dependsOn: Test
-    condition: succeeded()
+    condition: |
+      and(
+        succeeded(),
+        startsWith(variables['triggerBranch'], 'refs/heads/prod/')
+      )
     jobs:
       - job: ProdJob
         displayName: "Production Job"
         pool:
           vmImage: "ubuntu-latest"
         steps:
-          - bash: echo "Running in Production environment"
+          - bash: |
+              echo "Running in Production environment"
+              echo "Triggered by pipeline: $(triggerPipeline)"
+              echo "Triggered by branch: $(triggerBranch)"
             displayName: "Print Production Environment"
