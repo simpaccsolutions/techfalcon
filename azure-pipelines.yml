@@ -14,6 +14,10 @@ variables:
     value: $[coalesce(resources.pipeline.bluefalcon.sourceBranch, resources.pipeline.greenfalcon.sourceBranch, variables['Build.SourceBranch'])]
   - name: triggerPipeline
     value: $[coalesce(resources.pipeline.bluefalcon.pipelineName, resources.pipeline.greenfalcon.pipelineName, 'direct')]
+  - name: blueFalconTriggered
+    value: $[ne(resources.pipeline.bluefalcon.runID, '')]
+  - name: greenFalconTriggered
+    value: $[ne(resources.pipeline.greenfalcon.runID, '')]
 
 stages:
   - stage: Debug
@@ -30,8 +34,12 @@ stages:
               echo "triggerBranch: $(triggerBranch)"
               echo "triggerPipeline: $(triggerPipeline)"
               echo "Build.Reason: $(Build.Reason)"
+              echo "blueFalconTriggered: $(blueFalconTriggered)"
+              echo "greenFalconTriggered: $(greenFalconTriggered)"
               echo "resources.pipeline.bluefalcon.sourceBranch: $(resources.pipeline.bluefalcon.sourceBranch)"
               echo "resources.pipeline.greenfalcon.sourceBranch: $(resources.pipeline.greenfalcon.sourceBranch)"
+              echo "resources.pipeline.bluefalcon.runID: $(resources.pipeline.bluefalcon.runID)"
+              echo "resources.pipeline.greenfalcon.runID: $(resources.pipeline.greenfalcon.runID)"
               echo "========================="
             displayName: "Print Debug Information"
 
@@ -42,8 +50,20 @@ stages:
       and(
         succeeded(),
         or(
-          eq(variables['triggerBranch'], 'refs/heads/main'),
-          startsWith(variables['triggerBranch'], 'refs/heads/dev/')
+          and(
+            eq(variables['blueFalconTriggered'], 'True'),
+            or(
+              eq(resources.pipeline.bluefalcon.sourceBranch, 'refs/heads/main'),
+              startsWith(resources.pipeline.bluefalcon.sourceBranch, 'refs/heads/dev/')
+            )
+          ),
+          and(
+            eq(variables['greenFalconTriggered'], 'True'),
+            or(
+              eq(resources.pipeline.greenfalcon.sourceBranch, 'refs/heads/main'),
+              startsWith(resources.pipeline.greenfalcon.sourceBranch, 'refs/heads/dev/')
+            )
+          )
         )
       )
     jobs:
@@ -65,8 +85,20 @@ stages:
       and(
         succeeded(),
         or(
-          startsWith(variables['triggerBranch'], 'refs/heads/test/'),
-          startsWith(variables['triggerBranch'], 'refs/heads/prod/')
+          and(
+            eq(variables['blueFalconTriggered'], 'True'),
+            or(
+              startsWith(resources.pipeline.bluefalcon.sourceBranch, 'refs/heads/test/'),
+              startsWith(resources.pipeline.bluefalcon.sourceBranch, 'refs/heads/prod/')
+            )
+          ),
+          and(
+            eq(variables['greenFalconTriggered'], 'True'),
+            or(
+              startsWith(resources.pipeline.greenfalcon.sourceBranch, 'refs/heads/test/'),
+              startsWith(resources.pipeline.greenfalcon.sourceBranch, 'refs/heads/prod/')
+            )
+          )
         )
       )
     jobs:
@@ -86,9 +118,17 @@ stages:
     dependsOn: Test
     condition: |
       and(
-        ne(variables['Build.Reason'], 'PullRequest'),
         succeeded('Test'),
-        startsWith(variables['triggerBranch'], 'refs/heads/prod/')
+        or(
+          and(
+            eq(variables['blueFalconTriggered'], 'True'),
+            startsWith(resources.pipeline.bluefalcon.sourceBranch, 'refs/heads/prod/')
+          ),
+          and(
+            eq(variables['greenFalconTriggered'], 'True'),
+            startsWith(resources.pipeline.greenfalcon.sourceBranch, 'refs/heads/prod/')
+          )
+        )
       )
     jobs:
       - job: ProdJob
